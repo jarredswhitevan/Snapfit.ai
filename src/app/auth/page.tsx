@@ -1,18 +1,18 @@
-import { Card } from "@/components/ui/Card";
-import { AuthForm } from "@/components/AuthForm";
+import { forwardRef, type InputHTMLAttributes } from "react";
+import { cn } from "@/lib/utils";
 
-export default function AuthPage() {
-  return (
-    <div className="container flex justify-center">
-      <Card className="w-full max-w-md space-y-6">
-        <div className="space-y-2 text-center">
-          <h1 className="text-2xl font-semibold">Welcome to SnapFIT</h1>
-          <p className="text-sm text-slate-600">
-            Sign up or sign in to build your AI fitness plan.
-          </p>
-        </div>
-        <AuthForm />
-      </Card>
-    </div>
-  );
-}
+export const Input = forwardRef<
+  HTMLInputElement,
+  InputHTMLAttributes<HTMLInputElement>
+>(({ className, ...props }, ref) => (
+  <input
+    ref={ref}
+    className={cn(
+      "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-green-200",
+      className
+    )}
+    {...props}
+  />
+));
+
+Input.displayName = "Input";
