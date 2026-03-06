@@ -1,24 +1,19 @@
 "use client";
 
-import { useTransition } from "react";
-import { createBillingPortal } from "@/app/actions/stripe";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 
-export const BillingPortalButton = () => {
-  const [isPending, startTransition] = useTransition();
-
-  const handlePortal = () => {
-    startTransition(async () => {
-      const { url } = await createBillingPortal();
-      if (url) {
-        window.location.href = url;
-      }
-    });
-  };
-
+export function BillingPortalButton() {
   return (
-    <Button variant="outline" onClick={handlePortal} disabled={isPending}>
-      Manage Billing
+    <Button
+      className="bg-slate-700 hover:bg-slate-800"
+      type="button"
+      onClick={async () => {
+        const res = await fetch("/api/stripe/portal", { method: "POST" });
+        const data = await res.json();
+        if (data.url) window.location.href = data.url;
+      }}
+    >
+      Manage billing
     </Button>
   );
-};
+}
