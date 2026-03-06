@@ -1,42 +1,62 @@
-# SnapFIT
+# SnapFIT MVP
 
-AI-generated workout + meal plans with progress logging and Stripe subscriptions.
+SnapFIT is a polished AI-powered fitness and nutrition SaaS MVP built with Next.js App Router.
 
-## Local setup
+## Features
+- Marketing landing page + pricing + auth + legal pages
+- Authenticated app shell with dashboard, workouts, meals, progress, habits, history, billing, settings
+- Multi-step onboarding form with React Hook Form + Zod validation
+- AI generation scaffold for workout + meal plans with mock fallback behavior
+- Stripe checkout/portal/webhook route scaffolding with mock subscription fallback
+- Supabase auth scaffolding (email/password) with required env configuration
+- Light/dark theme support
 
+## Tech Stack
+- Next.js 14 (App Router), TypeScript, Tailwind CSS
+- React Hook Form, Zod
+- Supabase (`@supabase/ssr`) scaffold
+- Stripe scaffold
+
+## Local Setup
 ```bash
 npm install
 npm run dev
 ```
+Open `http://localhost:3000`.
 
-### Environment variables
+## Demo Mode Behavior
+When service credentials are missing:
+- **Supabase missing**: app auth is disabled until Supabase env vars are configured
+- **Stripe missing**: checkout route returns mock URL and UI still supports plan gating
+- **AI key missing**: generation endpoint returns polished mock plans
 
-Copy `.env.example` to `.env.local` and fill in values:
+## Integration Points
+- Supabase: `src/lib/supabase/*`, `src/lib/auth/session.ts`
+- Stripe: `src/lib/stripe/config.ts`, `src/app/api/stripe/*`
+- AI provider: `src/lib/ai/provider.ts`, `src/app/api/ai/generate/route.ts`
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `OPENAI_API_KEY`
-- `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET`
-- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
-- `NEXT_PUBLIC_APP_URL`
-- `STRIPE_PRICE_ID`
+## Routes
+- Public: `/`, `/pricing`, `/login`, `/signup`, `/forgot-password`, `/terms`, `/privacy`
+- App: `/app`, `/app/onboarding`, `/app/workouts`, `/app/meals`, `/app/progress`, `/app/habits`, `/app/history`, `/app/billing`, `/app/settings`
 
-### Supabase SQL
+## Pricing
+- SnapFIT Core: $19.99/mo or $191.90/yr (20% off)
+- SnapFIT Elite: $39.99/mo or $383.90/yr (20% off)
+- 7-day free trial on both tiers
 
-Run the SQL in `supabase/schema.sql` in the Supabase SQL editor to create tables, RLS policies, and the profile trigger.
+## Suggested Data Model
+Core tables:
+- `profiles`
+- `subscriptions`
+- `onboarding_profiles`
+- `workout_plans`
+- `meal_plans`
+- `progress_logs`
+- `habit_logs`
+- `ai_generations`
 
-### Stripe webhook testing
-
-Use the Stripe CLI:
-
-```bash
-stripe listen --forward-to localhost:3000/api/stripe/webhook
-```
-
-Then trigger a checkout session through the UI and confirm webhook events are received.
-
-## Deployment
-
-Deploy to Vercel with the same environment variables configured in the project settings.
+## Deployment (Vercel)
+1. Import repo into Vercel
+2. Add env vars from `.env.example`
+3. Configure Supabase auth callback URLs + Stripe webhook URL
+4. Deploy

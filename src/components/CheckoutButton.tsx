@@ -1,24 +1,18 @@
 "use client";
 
-import { useTransition } from "react";
-import { createCheckoutSession } from "@/app/actions/stripe";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 
-export const CheckoutButton = ({ label }: { label?: string }) => {
-  const [isPending, startTransition] = useTransition();
-
-  const handleCheckout = () => {
-    startTransition(async () => {
-      const { url } = await createCheckoutSession();
-      if (url) {
-        window.location.href = url;
-      }
-    });
-  };
-
+export function CheckoutButton({ label = "Upgrade" }: { label?: string }) {
   return (
-    <Button onClick={handleCheckout} disabled={isPending}>
-      {label ?? "Upgrade"}
+    <Button
+      type="button"
+      onClick={async () => {
+        const res = await fetch("/api/stripe/checkout", { method: "POST" });
+        const data = await res.json();
+        if (data.checkoutUrl) window.location.href = data.checkoutUrl;
+      }}
+    >
+      {label}
     </Button>
   );
-};
+}

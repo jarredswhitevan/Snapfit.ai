@@ -1,35 +1,23 @@
-import Link from "next/link";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
+"use client";
+
+import { useState } from "react";
+import { PublicNavbar } from "@/components/layout/public-navbar";
+import { PricingCard } from "@/components/pricing/pricing-card";
+import { BillingCycle } from "@/types/domain";
 
 export default function PricingPage() {
+  const [cycle, setCycle] = useState<BillingCycle>("monthly");
   return (
-    <div className="container space-y-10">
-      <div className="text-center">
-        <Badge>Simple pricing</Badge>
-        <h1 className="mt-4 text-4xl font-semibold">SnapFIT Monthly</h1>
-        <p className="mt-2 text-slate-600">
-          Unlimited plan regeneration after your free first plan.
-        </p>
-      </div>
-      <div className="mx-auto max-w-xl">
-        <Card className="space-y-6">
-          <div>
-            <p className="text-4xl font-semibold">$19</p>
-            <p className="text-sm text-slate-500">per month</p>
-          </div>
-          <ul className="space-y-2 text-sm text-slate-600">
-            <li>✔️ Personalized workout + meal plans</li>
-            <li>✔️ AI regeneration up to 3x per day</li>
-            <li>✔️ Progress logging and dashboard insights</li>
-            <li>✔️ Cancel anytime</li>
-          </ul>
-          <Link href="/auth">
-            <Button className="w-full">Get Started</Button>
-          </Link>
-        </Card>
-      </div>
+    <div>
+      <PublicNavbar />
+      <main className="mx-auto max-w-5xl px-4 py-14">
+        <h1 className="text-4xl font-semibold">Simple pricing, premium results.</h1>
+        <div className="mt-4 inline-flex rounded-lg border p-1 text-sm">
+          <button className={`rounded-md px-3 py-1 ${cycle === "monthly" ? "bg-green-500 text-white" : ""}`} onClick={() => setCycle("monthly")}>Monthly</button>
+          <button className={`rounded-md px-3 py-1 ${cycle === "annual" ? "bg-green-500 text-white" : ""}`} onClick={() => setCycle("annual")}>Annual (20% off)</button>
+        </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-2"><PricingCard tier="core" cycle={cycle} /><PricingCard tier="elite" cycle={cycle} cta="Upgrade to Elite" /></div>
+      </main>
     </div>
   );
 }

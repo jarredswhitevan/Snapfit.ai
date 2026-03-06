@@ -1,12 +1,13 @@
-import type { HTMLAttributes } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/cn";
 
-export const Badge = ({ className, ...props }: HTMLAttributes<HTMLSpanElement>) => (
-  <span
-    className={cn(
-      "inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700",
-      className
-    )}
-    {...props}
-  />
-);
+export function Badge({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium",
+        className,
+      )}
+      {...props}
+    />
+  );
+}

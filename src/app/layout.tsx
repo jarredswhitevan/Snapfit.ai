@@ -1,22 +1,13 @@
-import type { Metadata } from "next";
 import "./globals.css";
-import { Navbar } from "@/components/Navbar";
+import { ThemeProvider } from "@/components/layout/theme-provider";
 
-export const metadata: Metadata = {
-  title: "SnapFIT - AI Fitness Plans",
-  description: "AI-generated workout and meal plans tailored to your goals."
-};
+export const metadata = { title: "SnapFIT", description: "AI-powered fitness + nutrition SaaS" };
 
-export default function RootLayout({
-  children
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-white text-slate-900">
-        <Navbar />
-        <main className="py-10">{children}</main>
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );
