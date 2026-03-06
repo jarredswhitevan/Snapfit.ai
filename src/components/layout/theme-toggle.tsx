@@ -2,25 +2,18 @@
 
 import { useThemeMode } from "@/hooks/use-theme";
 
-const cycle: Array<"light" | "dark" | "system"> = ["light", "dark", "system"];
-
 export function ThemeToggle() {
-  const { theme, resolvedTheme, setTheme } = useThemeMode();
-  const currentIndex = cycle.indexOf(theme);
-  const nextTheme = cycle[(currentIndex + 1) % cycle.length];
-
-  const preferenceLabel =
-    theme === "dark" ? "Dark" : theme === "light" ? "Light" : "System";
+  const { theme, setTheme } = useThemeMode();
+  const isDark = theme === "dark";
 
   return (
     <button
       className="rounded-lg border px-3 py-2 text-sm"
-      onClick={() => setTheme(nextTheme)}
+      onClick={() => setTheme(isDark ? "light" : "dark")}
       title="Toggle theme mode"
       type="button"
     >
-      Theme: {preferenceLabel}
-      {theme === "system" ? ` (${resolvedTheme})` : ""}
+      Theme: {isDark ? "Dark" : "Light"}
     </button>
   );
 }

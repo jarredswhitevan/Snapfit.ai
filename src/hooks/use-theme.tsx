@@ -2,64 +2,37 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-type ThemePreference = "light" | "dark" | "system";
-type ResolvedTheme = "light" | "dark";
+type ThemeMode = "light" | "dark";
 
 const ThemeContext = createContext<{
-  theme: ThemePreference;
-  resolvedTheme: ResolvedTheme;
-  setTheme: (theme: ThemePreference) => void;
+  theme: ThemeMode;
+  setTheme: (theme: ThemeMode) => void;
 }>({
-  theme: "system",
-  resolvedTheme: "light",
+  theme: "light",
   setTheme: () => undefined,
 });
 
 const STORAGE_KEY = "snapfit-theme";
 
-const getSystemTheme = (): ResolvedTheme =>
-  window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-
-const resolveTheme = (theme: ThemePreference): ResolvedTheme =>
-  theme === "system" ? getSystemTheme() : theme;
+const sanitizeTheme = (value: string | null): ThemeMode =>
+  value === "dark" ? "dark" : "light";
 
 export function ThemeContextProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<ThemePreference>("system");
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light");
+  const [theme, setThemeState] = useState<ThemeMode>("light");
 
   useEffect(() => {
-    const stored = (localStorage.getItem(STORAGE_KEY) as ThemePreference | null) ?? "system";
+    const stored = sanitizeTheme(localStorage.getItem(STORAGE_KEY));
     setThemeState(stored);
-
-    const initialResolved = resolveTheme(stored);
-    setResolvedTheme(initialResolved);
-    document.documentElement.classList.toggle("dark", initialResolved === "dark");
-
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const listener = () => {
-      const latestPref =
-        (localStorage.getItem(STORAGE_KEY) as ThemePreference | null) ?? "system";
-      if (latestPref !== "system") return;
-
-      const updated = getSystemTheme();
-      setResolvedTheme(updated);
-      document.documentElement.classList.toggle("dark", updated === "dark");
-    };
-
-    media.addEventListener("change", listener);
-    return () => media.removeEventListener("change", listener);
+    document.documentElement.classList.toggle("dark", stored === "dark");
   }, []);
 
-  const setTheme = (next: ThemePreference) => {
+  const setTheme = (next: ThemeMode) => {
     localStorage.setItem(STORAGE_KEY, next);
     setThemeState(next);
-
-    const resolved = resolveTheme(next);
-    setResolvedTheme(resolved);
-    document.documentElement.classList.toggle("dark", resolved === "dark");
+    document.documentElement.classList.toggle("dark", next === "dark");
   };
 
-  const value = useMemo(() => ({ theme, resolvedTheme, setTheme }), [theme, resolvedTheme]);
+  const value = useMemo(() => ({ theme, setTheme }), [theme]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
