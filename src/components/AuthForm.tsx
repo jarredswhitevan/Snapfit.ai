@@ -1,87 +1,79 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 
-const authSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6)
-});
+export function AuthForm({ mode }: { mode: "login" | "signup" }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-type AuthFormValues = z.infer<typeof authSchema>;
+  const supabase = createSupabaseBrowserClient();
 
-export const AuthForm = () => {
-  const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-up");
-  const [message, setMessage] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors }
-  } = useForm<AuthFormValues>({
-    resolver: zodResolver(authSchema)
-  });
+    if (!supabase) {
+      setError("Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+      setLoading(false);
+      return;
+    }
 
-  const onSubmit = (values: AuthFormValues) => {
-    startTransition(async () => {
-      setMessage(null);
-      const supabase = createSupabaseBrowserClient();
-      if (mode === "sign-up") {
-        const { error } = await supabase.auth.signUp({
-          email: values.email,
-          password: values.password
-        });
-        if (error) {
-          setMessage(error.message);
-          return;
-        }
-        setMessage("Check your email to confirm your account, then sign in.");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword(values);
-        if (error) {
-          setMessage(error.message);
-          return;
-        }
-        window.location.href = "/dashboard";
+    const formData = new FormData(e.currentTarget);
+    const email = String(formData.get("email") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
+    const firstName = String(formData.get("firstName") ?? "").trim();
+
+    if (mode === "login") {
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) {
+        setError(signInError.message);
+        setLoading(false);
+        return;
       }
+
+      window.location.href = "/app";
+      return;
+    }
+
+    const { error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { first_name: firstName },
+        emailRedirectTo:
+          typeof window !== "undefined" ? `${window.location.origin}/login` : undefined,
+      },
     });
+
+    if (signUpError) {
+      setError(signUpError.message);
+      setLoading(false);
+      return;
+    }
+
+    setSuccess("Account created. Check your inbox for a confirmation link if email confirmation is enabled.");
+    setLoading(false);
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div>
-        <label className="text-sm font-medium">Email</label>
-        <Input type="email" {...register("email")} />
-        {errors.email && (
-          <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
-        )}
-      </div>
-      <div>
-        <label className="text-sm font-medium">Password</label>
-        <Input type="password" {...register("password")} />
-        {errors.password && (
-          <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>
-        )}
-      </div>
-      {message && <p className="text-sm text-slate-600">{message}</p>}
-      <Button type="submit" className="w-full" disabled={isPending}>
-        {mode === "sign-up" ? "Create account" : "Sign in"}
+    <form className="mt-4 space-y-3" onSubmit={handleSubmit}>
+      <Input name="email" placeholder="Email" type="email" required />
+      <Input name="password" placeholder="Password" type="password" required minLength={6} />
+      {mode === "signup" && <Input name="firstName" placeholder="First name" required />}
+      {error && <p className="text-sm text-red-500">{error}</p>}
+      {success && <p className="text-sm text-green-600">{success}</p>}
+      <Button className="w-full" type="submit" disabled={loading}>
+        {loading ? "Please wait..." : mode === "login" ? "Log in" : "Create account"}
       </Button>
-      <button
-        type="button"
-        className="w-full text-sm text-slate-600 hover:text-slate-900"
-        onClick={() => setMode(mode === "sign-up" ? "sign-in" : "sign-up")}
-      >
-        {mode === "sign-up"
-          ? "Already have an account? Sign in"
-          : "New here? Create an account"}
-      </button>
+      <p className="text-xs text-muted-foreground">
+        Supabase authentication is enabled. Demo login has been disabled.
+      </p>
     </form>
   );
-};
+}

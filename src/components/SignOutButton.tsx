@@ -1,23 +1,22 @@
 "use client";
 
-import { useTransition } from "react";
+import { Button } from "@/components/ui/button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { Button } from "@/components/ui/Button";
 
-export const SignOutButton = () => {
-  const [isPending, startTransition] = useTransition();
-
-  const handleSignOut = () => {
-    startTransition(async () => {
-      const supabase = createSupabaseBrowserClient();
-      await supabase.auth.signOut();
-      window.location.href = "/";
-    });
-  };
-
+export function SignOutButton() {
   return (
-    <Button variant="ghost" onClick={handleSignOut} disabled={isPending}>
-      Sign Out
+    <Button
+      className="bg-slate-700 hover:bg-slate-800"
+      type="button"
+      onClick={async () => {
+        const supabase = createSupabaseBrowserClient();
+        if (supabase) {
+          await supabase.auth.signOut();
+        }
+        window.location.href = "/login";
+      }}
+    >
+      Sign out
     </Button>
   );
-};
+}
