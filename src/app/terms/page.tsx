@@ -1,0 +1,1 @@
+export default function TermsPage() { return <main className="mx-auto max-w-3xl px-4 py-16"><h1 className="text-3xl font-semibold">Terms of Service</h1><p className="mt-4 text-sm text-muted-foreground">By using SnapFIT, you agree to responsible training decisions and account terms.</p></main>; }
