@@ -1,65 +1,80 @@
-import { headers } from "next/headers";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
-export async function POST(request: Request) {
-  const body = await request.text();
-  const signature = headers().get("stripe-signature");
+export async function POST(req: NextRequest) {
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!webhookSecret) return NextResponse.json({ error: "Missing STRIPE_WEBHOOK_SECRET" }, { status: 500 });
 
-  if (!signature) {
-    return NextResponse.json({ error: "Missing signature" }, { status: 400 });
-  }
+  const sig = req.headers.get("stripe-signature");
+  if (!sig) return NextResponse.json({ error: "Missing stripe-signature" }, { status: 400 });
 
-  let event;
+  const rawBody = await req.text();
+
+  let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET ?? ""
-    );
-  } catch (error) {
-    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+    event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+  } catch (err: any) {
+    return NextResponse.json({ error: `Webhook signature verification failed: ${err?.message ?? "unknown"}` }, { status: 400 });
   }
 
-  const supabase = createSupabaseAdminClient();
+  const supabaseAdmin = createSupabaseAdminClient();
 
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object as Stripe.Checkout.Session;
-    const userId = session.metadata?.user_id ?? session.client_reference_id;
-    if (userId && session.customer) {
-      await supabase.from("subscriptions").upsert({
-        user_id: userId,
-        stripe_customer_id: session.customer as string,
-        stripe_subscription_id: session.subscription as string,
-        status: session.status,
-        current_period_end: null
-      });
+  switch (event.type) {
+    case "checkout.session.completed": {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const userId = (session.metadata as any)?.userId as string | undefined;
+      const subscriptionId = session.subscription as string | null;
+      const customerId = session.customer as string | null;
+
+      if (userId && subscriptionId) {
+        const sub = await stripe.subscriptions.retrieve(subscriptionId);
+        await supabaseAdmin.from("subscriptions").upsert(
+          {
+            user_id: userId,
+            stripe_customer_id: customerId ?? (sub.customer as string),
+            stripe_subscription_id: sub.id,
+            status: sub.status,
+            current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+          },
+          { onConflict: "user_id" }
+        );
+      }
+      break;
     }
-  }
 
-  if (event.type.startsWith("customer.subscription")) {
-    const subscription = event.data.object as Stripe.Subscription;
-    const customerId = subscription.customer as string;
+    case "customer.subscription.updated":
+    case "customer.subscription.deleted":
+    case "customer.subscription.created": {
+      const sub = event.data.object as Stripe.Subscription;
+      const subscriptionId = sub.id;
 
-    const { data: existing } = await supabase
-      .from("subscriptions")
-      .select("user_id")
-      .eq("stripe_customer_id", customerId)
-      .maybeSingle();
+      // Update by subscription id (in case user_id isn't in metadata)
+      const { data: row } = await supabaseAdmin
+        .from("subscriptions")
+        .select("user_id")
+        .eq("stripe_subscription_id", subscriptionId)
+        .maybeSingle();
 
-    if (existing?.user_id) {
-      await supabase.from("subscriptions").upsert({
-        user_id: existing.user_id,
-        stripe_customer_id: customerId,
-        stripe_subscription_id: subscription.id,
-        status: subscription.status,
-        current_period_end: new Date(
-          subscription.current_period_end * 1000
-        ).toISOString()
-      });
+      const userId = (row as any)?.user_id;
+      if (userId) {
+        await supabaseAdmin.from("subscriptions").upsert(
+          {
+            user_id: userId,
+            stripe_customer_id: sub.customer as string,
+            stripe_subscription_id: sub.id,
+            status: sub.status,
+            current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+          },
+          { onConflict: "user_id" }
+        );
+      }
+      break;
     }
+
+    default:
+      break;
   }
 
   return NextResponse.json({ received: true });

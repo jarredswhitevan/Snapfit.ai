@@ -1,24 +1,40 @@
 "use client";
 
-import { useTransition } from "react";
-import { createCheckoutSession } from "@/app/actions/stripe";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
+import type { BillingCycle, PlanTier } from "@/types/domain";
 
-export const CheckoutButton = ({ label }: { label?: string }) => {
-  const [isPending, startTransition] = useTransition();
-
-  const handleCheckout = () => {
-    startTransition(async () => {
-      const { url } = await createCheckoutSession();
-      if (url) {
-        window.location.href = url;
-      }
-    });
-  };
-
+export function CheckoutButton({
+  label = "Upgrade",
+  tier = "core",
+  cycle = "monthly",
+}: {
+  label?: string;
+  tier?: PlanTier;
+  cycle?: BillingCycle;
+}) {
   return (
-    <Button onClick={handleCheckout} disabled={isPending}>
-      {label ?? "Upgrade"}
+    <Button
+      type="button"
+      onClick={async () => {
+        try {
+          const res = await fetch("/api/stripe/checkout", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ tier, cycle }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            alert(data?.error ?? "Unable to start checkout. Check Stripe env vars and webhook settings.");
+            return;
+          }
+          if (data.checkoutUrl) window.location.href = data.checkoutUrl;
+          else alert("No checkout URL returned.");
+        } catch (e: any) {
+          alert(e?.message ?? "Network error starting checkout.");
+        }
+      }}
+    >
+      {label}
     </Button>
   );
-};
+}

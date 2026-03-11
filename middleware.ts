@@ -1,72 +1,69 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const PROTECTED_ROUTES = ["/dashboard", "/onboarding", "/account"];
-
 export async function middleware(request: NextRequest) {
-  const response = NextResponse.next();
+  if (!request.nextUrl.pathname.startsWith("/app")) return NextResponse.next();
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name: string, value: string, options: { [key: string]: string }) {
-          response.cookies.set({ name, value, ...options });
-        },
-        remove(name: string, options: { [key: string]: string }) {
-          response.cookies.set({ name, value: "", ...options });
-        }
-      }
-    }
-  );
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  const pathname = request.nextUrl.pathname;
-
-  const isProtected = PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
-
-  if (!user && isProtected) {
-    return NextResponse.redirect(new URL("/auth", request.url));
+  // If Supabase isn't configured, hard-fail to login.
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (user) {
+  // Supabase auth gate.
+  const response = NextResponse.next();
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      get(name: string) {
+        return request.cookies.get(name)?.value;
+      },
+      set(name: string, value: string, options: any) {
+        response.cookies.set({ name, value, ...options });
+      },
+      remove(name: string, options: any) {
+        response.cookies.set({ name, value: "", ...options });
+      },
+    },
+  });
+
+  const { data } = await supabase.auth.getUser();
+  const user = data.user;
+  if (!user) return NextResponse.redirect(new URL("/login", request.url));
+
+  const path = request.nextUrl.pathname;
+
+  // Onboarding gate: if profile isn't complete, send to /app/onboarding
+  if (!path.startsWith("/app/onboarding")) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("onboarding_complete")
       .eq("id", user.id)
       .maybeSingle();
 
-    const onboardingComplete = profile?.onboarding_complete ?? false;
-
-    if (!onboardingComplete && pathname.startsWith("/dashboard")) {
-      return NextResponse.redirect(new URL("/onboarding", request.url));
+    if (!profile?.onboarding_complete) {
+      return NextResponse.redirect(new URL("/app/onboarding", request.url));
     }
+  }
 
-    if (!onboardingComplete && pathname.startsWith("/account")) {
-      return NextResponse.redirect(new URL("/onboarding", request.url));
-    }
+  // Paywall gate: allow only billing + settings until subscription is active/trialing
+  const paywallAllowed = path.startsWith("/app/billing") || path.startsWith("/app/settings") || path.startsWith("/app/onboarding");
+  if (!paywallAllowed) {
+    const { data: sub } = await supabase
+      .from("subscriptions")
+      .select("status")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-    if (onboardingComplete && pathname.startsWith("/onboarding")) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
-
-    if (pathname.startsWith("/auth")) {
-      return NextResponse.redirect(
-        new URL(onboardingComplete ? "/dashboard" : "/onboarding", request.url)
-      );
+    const status = (sub as any)?.status;
+    const ok = status === "trialing" || status === "active";
+    if (!ok) {
+      return NextResponse.redirect(new URL("/app/billing?startCheckout=1&tier=elite&cycle=monthly", request.url));
     }
   }
 
   return response;
 }
 
-export const config = {
-  matcher: ["/dashboard/:path*", "/onboarding/:path*", "/account/:path*", "/auth"]
-};
+export const config = { matcher: ["/app/:path*"] };

@@ -2,36 +2,77 @@
 
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
+
+const optionalNumber = (schema: z.ZodNumber) =>
+  z.preprocess((v) => (v === "" || v === null || v === undefined ? undefined : Number(v)), schema.optional());
 
 const onboardingSchema = z.object({
-  age: z.number(),
-  height_cm: z.number(),
-  weight_lbs: z.number(),
-  goal: z.string(),
-  training_days: z.number(),
-  equipment: z.string(),
-  dietary_prefs: z.string().optional().nullable()
+  firstName: z.string().min(2),
+  age: z.number().min(13).max(90),
+  sex: z.enum(["male", "female", "other"]),
+  heightFt: z.number().min(3).max(7),
+  heightIn: z.number().min(0).max(11.9),
+  weightLbs: z.number().min(70).max(600),
+  bodyType: z.preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
+  activityLevel: z.enum(["sedentary", "light", "moderate", "very"]),
+  goalType: z.enum(["lose_weight", "gain_weight", "maintain"]),
+  targetWeightLbs: optionalNumber(z.number().min(70).max(600)),
+  timeframeWeeks: optionalNumber(z.number().min(1).max(260)),
 });
 
 export const saveOnboarding = async (values: z.infer<typeof onboardingSchema>) => {
+  const parsed = onboardingSchema.parse(values);
+
+  if (!isSupabaseConfigured) return { success: true };
+
   const supabase = createSupabaseServerClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const { data } = await supabase.auth.getUser();
+  const user = data.user;
+  if (!user?.id) throw new Error("Not authenticated");
 
-  if (!user) {
-    throw new Error("Unauthorized");
-  }
+  const { computeCalorieTarget } = await import("@/lib/calories");
+  const heightCm = Math.round(((parsed.heightFt * 12 + parsed.heightIn) * 2.54));
 
-  const payload = onboardingSchema.parse(values);
-
-  const { error } = await supabase.from("profiles").upsert({
-    id: user.id,
-    onboarding_complete: true,
-    ...payload
+  const computed = computeCalorieTarget({
+    sex: parsed.sex,
+    age: parsed.age,
+    heightCm,
+    weightLbs: parsed.weightLbs,
+    activityLevel: parsed.activityLevel,
+    goalType: parsed.goalType,
+    targetWeightLbs: parsed.targetWeightLbs,
+    timeframeWeeks: parsed.timeframeWeeks,
   });
 
-  if (error) {
-    throw new Error(error.message);
-  }
+  // 1) Persist to auth user_metadata for display
+  const { error: authErr } = await supabase.auth.updateUser({
+    data: {
+      first_name: parsed.firstName,
+    },
+  });
+  if (authErr) throw authErr;
+
+  // 2) Persist profile + computed calorie target
+  const { error: profErr } = await supabase
+    .from("profiles")
+    .upsert(
+      {
+        id: user.id,
+        onboarding_complete: true,
+        age: parsed.age,
+        height_cm: heightCm,
+        weight_lbs: Math.round(parsed.weightLbs),
+        body_type: parsed.bodyType ?? null,
+        activity_level: parsed.activityLevel,
+        goal: parsed.goalType,
+        goal_timeframe_weeks: parsed.timeframeWeeks ?? null,
+        target_weight_lbs: parsed.targetWeightLbs ?? null,
+        calorie_target: computed.calorieTarget,
+      },
+      { onConflict: "id" }
+    );
+  if (profErr) throw profErr;
+
+  return { success: true, calorieTarget: computed.calorieTarget, message: computed.message };
 };

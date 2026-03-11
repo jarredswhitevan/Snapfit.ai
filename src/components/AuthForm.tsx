@@ -1,87 +1,94 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 
-const authSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6)
-});
+export function AuthForm({ mode }: { mode: "login" | "signup" }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-type AuthFormValues = z.infer<typeof authSchema>;
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
 
-export const AuthForm = () => {
-  const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-up");
-  const [message, setMessage] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const isSupabaseConfigured = Boolean(supabase);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors }
-  } = useForm<AuthFormValues>({
-    resolver: zodResolver(authSchema)
-  });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-  const onSubmit = (values: AuthFormValues) => {
-    startTransition(async () => {
-      setMessage(null);
-      const supabase = createSupabaseBrowserClient();
-      if (mode === "sign-up") {
-        const { error } = await supabase.auth.signUp({
-          email: values.email,
-          password: values.password
-        });
-        if (error) {
-          setMessage(error.message);
-          return;
-        }
-        setMessage("Check your email to confirm your account, then sign in.");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword(values);
-        if (error) {
-          setMessage(error.message);
-          return;
-        }
-        window.location.href = "/dashboard";
+    try {
+      if (!isSupabaseConfigured) {
+        throw new Error("Auth is not configured. Set Supabase env vars in Vercel (NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY).");
       }
-    });
+
+      if (mode === "login") {
+        const { error } = await supabase!.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        window.location.href = "/app";
+        return;
+      }
+
+      const { error } = await supabase!.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+          },
+        },
+      });
+      if (error) throw error;
+
+      // If email confirmations are enabled, user may need to confirm. Still redirect to app shell;
+      // middleware will bounce them to /login if they aren't fully authed.
+      window.location.href = "/app";
+    } catch (err: any) {
+      setError(err?.message ?? "Unable to authenticate. Please try again.");
+      setLoading(false);
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div>
-        <label className="text-sm font-medium">Email</label>
-        <Input type="email" {...register("email")} />
-        {errors.email && (
-          <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
-        )}
-      </div>
-      <div>
-        <label className="text-sm font-medium">Password</label>
-        <Input type="password" {...register("password")} />
-        {errors.password && (
-          <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>
-        )}
-      </div>
-      {message && <p className="text-sm text-slate-600">{message}</p>}
-      <Button type="submit" className="w-full" disabled={isPending}>
-        {mode === "sign-up" ? "Create account" : "Sign in"}
+    <form className="mt-4 space-y-3" onSubmit={handleSubmit}>
+      <Input
+        placeholder="Email"
+        type="email"
+        required
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        autoComplete="email"
+      />
+      <Input
+        placeholder="Password"
+        type="password"
+        required
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        autoComplete={mode === "login" ? "current-password" : "new-password"}
+      />
+      {mode === "signup" && (
+        <Input
+          placeholder="First name"
+          required
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          autoComplete="given-name"
+        />
+      )}
+      {error && <p className="text-sm text-red-500">{error}</p>}
+      <Button className="w-full" type="submit" disabled={loading}>
+        {loading ? "Please wait..." : mode === "login" ? "Log in" : "Create account"}
       </Button>
-      <button
-        type="button"
-        className="w-full text-sm text-slate-600 hover:text-slate-900"
-        onClick={() => setMode(mode === "sign-up" ? "sign-in" : "sign-up")}
-      >
-        {mode === "sign-up"
-          ? "Already have an account? Sign in"
-          : "New here? Create an account"}
-      </button>
+      <p className="text-xs text-muted-foreground">
+        {isSupabaseConfigured
+          ? "Connected to Supabase auth."
+          : "Supabase auth is not configured for this deployment."}
+      </p>
     </form>
   );
-};
+}
