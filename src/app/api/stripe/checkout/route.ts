@@ -39,17 +39,19 @@ export async function POST(req: NextRequest) {
     trial_period_days: 7,
   };
 
+  const lineItems: any[] = [{ price, quantity: 1 }];
+
   // $1 today, then $39.99/mo starting after the 7-day trial
-  // Implemented as a one-time invoice item charged at checkout.
+  // Implemented by adding a one-time price as an additional line item.
   if (tier === "elite" && cycle === "monthly" && stripeEnv.trialSetupFeePriceId) {
-    subscriptionData.add_invoice_items = [{ price: stripeEnv.trialSetupFeePriceId }];
+    lineItems.push({ price: stripeEnv.trialSetupFeePriceId, quantity: 1 });
   }
 
   const checkout = await stripe.checkout.sessions.create({
     mode: "subscription",
-    line_items: [{ price, quantity: 1 }],
+    line_items: lineItems,
     subscription_data: subscriptionData,
-    payment_method_collection: "always",
+    payment_method_collection: "always", 
     customer_email: customerEmail || undefined,
     success_url: `${appUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl}/cancel`,
