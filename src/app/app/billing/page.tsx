@@ -21,15 +21,22 @@ export default function BillingPage() {
     const cycle = (sp.get("cycle") as any) ?? "monthly";
 
     (async () => {
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ tier, cycle }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (data?.checkoutUrl) window.location.href = data.checkoutUrl;
-      else if (data?.error) alert(data.error);
-      else alert("Unable to start checkout.");
+      try {
+        const res = await fetch("/api/stripe/checkout", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ tier, cycle }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          alert(data?.error ?? "Unable to start checkout (server error).");
+          return;
+        }
+        if (data?.checkoutUrl) window.location.href = data.checkoutUrl;
+        else alert(data?.error ?? "Unable to start checkout.");
+      } catch (e: any) {
+        alert(e?.message ?? "Unable to start checkout (network error).");
+      }
     })();
   }, [sp]);
 
