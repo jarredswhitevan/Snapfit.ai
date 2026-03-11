@@ -56,6 +56,7 @@ export function OnboardingWizard() {
       </div>
     );
 
+  const goalTypeField = form.register("goalType");
   const goalType = form.watch("goalType");
 
   return (
@@ -114,7 +115,14 @@ export function OnboardingWizard() {
         <option value="very">Very active</option>
       </Select>
 
-      <Select {...form.register("goalType")}>
+      <Select
+        {...goalTypeField}
+        value={goalType}
+        onChange={(e) => {
+          goalTypeField.onChange(e);
+          form.setValue("goalType", e.target.value as any, { shouldValidate: true, shouldDirty: true });
+        }}
+      >
         <option value="lose_weight">Lose weight</option>
         <option value="gain_weight">Gain weight</option>
         <option value="maintain">Maintain</option>
