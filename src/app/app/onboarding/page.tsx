@@ -1,6 +1,6 @@
-import { PageHeader } from "@/components/dashboard/page-header";
-import { OnboardingWizard } from "@/components/forms/onboarding-wizard";
+import { redirect } from "next/navigation";
 
 export default function OnboardingPage() {
-  return <div><PageHeader title="Premium onboarding" description="Tell SnapFIT about your goals, training style, and nutrition preferences." /><OnboardingWizard /></div>;
+  // Onboarding now lives at /onboarding (outside the /app layout gate)
+  redirect("/onboarding");
 }
