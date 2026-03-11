@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { UnitSystemSelect } from "@/components/forms/unit-system-select";
+import { UnitConverter } from "@/components/forms/unit-converter";
 
 export default async function SettingsPage() {
   const session = await getSession();
@@ -46,6 +47,8 @@ export default async function SettingsPage() {
             <UnitSystemSelect initial={unitSystem} />
           </div>
         </Card>
+
+        <UnitConverter />
         <Card>
           <p className="font-medium">Account</p>
           <p className="text-sm text-muted-foreground">Password reset available from login.</p>
