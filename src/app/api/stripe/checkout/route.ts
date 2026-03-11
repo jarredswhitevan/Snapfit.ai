@@ -32,12 +32,21 @@ export async function POST(req: NextRequest) {
   const session = await getSession();
   const customerEmail = session?.user?.email;
 
+  const subscriptionData: any = {
+    trial_period_days: 7,
+  };
+
+  // $1 today, then $39.99/mo starting after the 7-day trial
+  // Implemented as a one-time invoice item charged at checkout.
+  if (tier === "core" && cycle === "monthly" && stripeEnv.trialSetupFeePriceId) {
+    subscriptionData.add_invoice_items = [{ price: stripeEnv.trialSetupFeePriceId }];
+  }
+
   const checkout = await stripe.checkout.sessions.create({
     mode: "subscription",
     line_items: [{ price, quantity: 1 }],
-    subscription_data: {
-      trial_period_days: 7,
-    },
+    subscription_data: subscriptionData,
+    payment_method_collection: "always",
     customer_email: customerEmail || undefined,
     success_url: `${appUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl}/cancel`,
