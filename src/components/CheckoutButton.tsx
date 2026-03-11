@@ -21,8 +21,13 @@ export function CheckoutButton({
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ tier, cycle }),
         });
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          alert(data?.error ?? "Unable to start checkout. Check Stripe env vars and webhook settings.");
+          return;
+        }
         if (data.checkoutUrl) window.location.href = data.checkoutUrl;
+        else alert("No checkout URL returned.");
       }}
     >
       {label}

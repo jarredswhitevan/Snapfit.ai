@@ -19,7 +19,10 @@ export async function POST(req: NextRequest) {
   const cycle = (body?.cycle as BillingCycle) ?? "monthly";
 
   if (!isStripeConfigured) {
-    return NextResponse.json({ mock: true, checkoutUrl: `/app/billing?mockCheckout=1&tier=${tier}&cycle=${cycle}` });
+    return NextResponse.json(
+      { error: "Stripe is not configured. Set STRIPE_SECRET_KEY and NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY." },
+      { status: 500 }
+    );
   }
 
   const price = pickPriceId(tier, cycle);
