@@ -23,11 +23,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
     try {
       if (!isSupabaseConfigured) {
-        // Demo fallback
-        const res = await fetch("/api/auth/mock-login", { method: "POST" });
-        if (!res.ok) throw new Error("Unable to authenticate. Please try again.");
-        window.location.href = "/app";
-        return;
+        throw new Error("Auth is not configured. Set Supabase env vars in Vercel (NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY).");
       }
 
       if (mode === "login") {
@@ -91,7 +87,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       <p className="text-xs text-muted-foreground">
         {isSupabaseConfigured
           ? "Connected to Supabase auth."
-          : "Demo mode is active when Supabase credentials are not configured."}
+          : "Supabase auth is not configured for this deployment."}
       </p>
     </form>
   );
