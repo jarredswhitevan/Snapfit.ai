@@ -7,11 +7,9 @@ export async function middleware(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // Demo-mode fallback when Supabase isn't configured.
+  // If Supabase isn't configured, hard-fail to login.
   if (!supabaseUrl || !supabaseAnonKey) {
-    const authed = request.cookies.get("snapfit_demo_auth")?.value === "1";
-    if (!authed) return NextResponse.redirect(new URL("/login", request.url));
-    return NextResponse.next();
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
   // Supabase auth gate.
@@ -31,7 +29,21 @@ export async function middleware(request: NextRequest) {
   });
 
   const { data } = await supabase.auth.getUser();
-  if (!data.user) return NextResponse.redirect(new URL("/login", request.url));
+  const user = data.user;
+  if (!user) return NextResponse.redirect(new URL("/login", request.url));
+
+  // Onboarding gate: if profile isn't complete, send to /app/onboarding
+  if (!request.nextUrl.pathname.startsWith("/app/onboarding")) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("onboarding_complete")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!profile?.onboarding_complete) {
+      return NextResponse.redirect(new URL("/app/onboarding", request.url));
+    }
+  }
 
   return response;
 }
