@@ -25,6 +25,8 @@ const schema = z.object({
 export function OnboardingWizard() {
   const [done, setDone] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -54,11 +56,19 @@ export function OnboardingWizard() {
   return (
     <form
       onSubmit={form.handleSubmit(async (values) => {
-        const res = await saveOnboarding(values);
-        if (res?.message) setNote(res.message);
-        localStorage.setItem("snapfit_onboarding_complete", "1");
-        setDone(true);
-        setTimeout(() => (window.location.href = "/app"), 900);
+        setSaving(true);
+        setError(null);
+        try {
+          const res = await saveOnboarding(values);
+          if (res?.message) setNote(res.message);
+          localStorage.setItem("snapfit_onboarding_complete", "1");
+          setDone(true);
+          setTimeout(() => (window.location.href = "/app"), 900);
+        } catch (e: any) {
+          setError(e?.message ?? "Unable to save onboarding.");
+        } finally {
+          setSaving(false);
+        }
       })}
       className="grid gap-4 md:grid-cols-2"
     >
@@ -105,9 +115,10 @@ export function OnboardingWizard() {
       )}
 
       {note ? <div className="md:col-span-2 rounded-lg border bg-muted p-3 text-sm">{note}</div> : null}
+      {error ? <div className="md:col-span-2 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-700">{error}</div> : null}
 
-      <Button className="md:col-span-2" type="submit">
-        Complete onboarding
+      <Button className="md:col-span-2" type="submit" disabled={saving}>
+        {saving ? "Saving..." : "Complete onboarding"}
       </Button>
     </form>
   );
