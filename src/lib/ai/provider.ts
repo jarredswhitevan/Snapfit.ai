@@ -56,8 +56,22 @@ Return ONLY valid JSON for a WorkoutPlan with fields:
   }
 }
 
-export async function generateMealPlan(): Promise<MealPlan> {
+export async function generateMealPlan(input?: {
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  preference?: string;
+  allergies?: string;
+}): Promise<MealPlan> {
   if (!isAiConfigured) return mockMealPlan;
+
+  const caloriesTarget = input?.calories ?? 2500;
+  const proteinTarget = input?.protein;
+  const carbsTarget = input?.carbs;
+  const fatTarget = input?.fat;
+  const preference = input?.preference?.trim();
+  const allergies = input?.allergies?.trim();
 
   try {
     const client = new OpenAI({ apiKey: resolvedApiKey });
@@ -67,8 +81,17 @@ export async function generateMealPlan(): Promise<MealPlan> {
 Return ONLY valid JSON for a MealPlan with fields:
 {id,title,dailyOverview,meals:[{name,calories,protein,carbs,fat,ingredients,prepNotes}],totalCalories,totalProtein,totalCarbs,totalFat,createdAt}
 - createdAt must be an ISO string.
-- Aim for ~2500 calories and high protein for building muscle.
 - 3-5 meals, ingredients as an array of short strings.
+
+Targets:
+- Total calories: ${caloriesTarget}
+${proteinTarget ? `- Protein (g): ${proteinTarget}` : ""}
+${carbsTarget ? `- Carbs (g): ${carbsTarget}` : ""}
+${fatTarget ? `- Fat (g): ${fatTarget}` : ""}
+${preference ? `- Style: ${preference}` : ""}
+${allergies ? `- Allergies/avoid: ${allergies}` : ""}
+
+Make the meal macros add up to the targets as closely as possible.
 `;
 
     const res = await client.chat.completions.create({
