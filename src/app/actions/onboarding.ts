@@ -8,7 +8,8 @@ const onboardingSchema = z.object({
   firstName: z.string().min(2),
   age: z.number().min(13).max(90),
   sex: z.enum(["male", "female", "other"]),
-  heightCm: z.number().min(120).max(230),
+  heightFt: z.number().min(3).max(7),
+  heightIn: z.number().min(0).max(11.9),
   weightLbs: z.number().min(70).max(600),
   bodyType: z.string().optional(),
   activityLevel: z.enum(["sedentary", "light", "moderate", "very"]),
@@ -28,10 +29,12 @@ export const saveOnboarding = async (values: z.infer<typeof onboardingSchema>) =
   if (!user?.id) throw new Error("Not authenticated");
 
   const { computeCalorieTarget } = await import("@/lib/calories");
+  const heightCm = Math.round(((parsed.heightFt * 12 + parsed.heightIn) * 2.54));
+
   const computed = computeCalorieTarget({
     sex: parsed.sex,
     age: parsed.age,
-    heightCm: parsed.heightCm,
+    heightCm,
     weightLbs: parsed.weightLbs,
     activityLevel: parsed.activityLevel,
     goalType: parsed.goalType,
@@ -55,7 +58,7 @@ export const saveOnboarding = async (values: z.infer<typeof onboardingSchema>) =
         id: user.id,
         onboarding_complete: true,
         age: parsed.age,
-        height_cm: Math.round(parsed.heightCm),
+        height_cm: heightCm,
         weight_lbs: Math.round(parsed.weightLbs),
         body_type: parsed.bodyType ?? null,
         activity_level: parsed.activityLevel,

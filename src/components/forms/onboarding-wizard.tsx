@@ -13,7 +13,8 @@ const schema = z.object({
   firstName: z.string().min(2),
   age: z.coerce.number().min(13).max(90),
   sex: z.enum(["male", "female", "other"]),
-  heightCm: z.coerce.number().min(120).max(230),
+  heightFt: z.coerce.number().min(3).max(7),
+  heightIn: z.coerce.number().min(0).max(11.9),
   weightLbs: z.coerce.number().min(70).max(600),
   bodyType: z.string().optional(),
   activityLevel: z.enum(["sedentary", "light", "moderate", "very"]),
@@ -34,7 +35,8 @@ export function OnboardingWizard() {
       firstName: "",
       age: 28,
       sex: "male",
-      heightCm: 178,
+      heightFt: 5,
+      heightIn: 10,
       weightLbs: 180,
       bodyType: "",
       activityLevel: "moderate",
@@ -81,7 +83,12 @@ export function OnboardingWizard() {
         <option value="other">Other</option>
       </Select>
 
-      <Input type="number" placeholder="Height (cm)" {...form.register("heightCm")} />
+      <div className="grid gap-2 md:col-span-1">
+        <Input type="number" placeholder="Height (ft)" {...form.register("heightFt")} />
+      </div>
+      <div className="grid gap-2 md:col-span-1">
+        <Input type="number" placeholder="Height (in)" {...form.register("heightIn")} />
+      </div>
       <Input type="number" placeholder="Weight (lbs)" {...form.register("weightLbs")} />
 
       <Select {...form.register("bodyType")}>
