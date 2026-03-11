@@ -2,13 +2,13 @@
 
 import { useThemeMode } from "@/hooks/use-theme";
 
-const cycle: Array<"light" | "dark" | "system"> = ["light", "dark", "system"];
+const cycle: Array<"light" | "dark"> = ["light", "dark"];
 
 export function ThemeToggle() {
   const { theme, setTheme } = useThemeMode();
   const currentIndex = cycle.indexOf(theme);
   const nextTheme = cycle[(currentIndex + 1) % cycle.length];
-  const label = theme === "dark" ? "Dark" : theme === "light" ? "Light" : "System";
+  const label = theme === "dark" ? "Dark" : "Light";
 
   return (
     <button
