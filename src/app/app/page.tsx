@@ -3,16 +3,29 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { Card } from "@/components/ui/card";
 import { getSession } from "@/lib/auth/session";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 export default async function AppDashboard() {
   const session = await getSession();
   const name = session?.user?.firstName ? session.user.firstName : "there";
 
+  let calorieTarget: number | null = null;
+  if (isSupabaseConfigured && session?.user?.id) {
+    const supabase = createSupabaseServerClient();
+    const { data } = await supabase
+      .from("profiles")
+      .select("calorie_target")
+      .eq("id", session.user.id)
+      .maybeSingle();
+    calorieTarget = (data as any)?.calorie_target ?? null;
+  }
+
   return (
     <div>
       <PageHeader title={`Welcome back, ${name}`} description="Let's keep momentum this week." />
       <div className="grid gap-4 md:grid-cols-4">
-        <StatCard label="Calorie target" value="--" helper="Daily" />
+        <StatCard label="Calorie target" value={calorieTarget ? `${calorieTarget.toLocaleString()} kcal` : "--"} helper="Daily" />
         <StatCard label="Macro target" value="--" />
         <StatCard label="Workouts this week" value="--" />
         <StatCard label="Latest weight" value="--" />

@@ -7,33 +7,108 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { saveOnboarding } from "@/app/actions/onboarding";
 
 const schema = z.object({
   firstName: z.string().min(2),
   age: z.coerce.number().min(13).max(90),
-  sex: z.string(),
-  primaryGoal: z.string(),
-  trainingDays: z.coerce.number().min(1).max(7),
-  dietaryPreference: z.string(),
-  injuries: z.string().optional(),
+  sex: z.enum(["male", "female", "other"]),
+  heightCm: z.coerce.number().min(120).max(230),
+  weightLbs: z.coerce.number().min(70).max(600),
+  bodyType: z.string().optional(),
+  activityLevel: z.enum(["sedentary", "light", "moderate", "very"]),
+  goalType: z.enum(["lose_weight", "gain_weight", "maintain"]),
+  targetWeightLbs: z.coerce.number().min(70).max(600).optional(),
+  timeframeWeeks: z.coerce.number().min(1).max(260).optional(),
 });
 
 export function OnboardingWizard() {
   const [done, setDone] = useState(false);
-  const form = useForm<z.infer<typeof schema>>({ resolver: zodResolver(schema), defaultValues: { firstName: "", age: 28, sex: "male", primaryGoal: "build_muscle", trainingDays: 4, dietaryPreference: "balanced", injuries: "" } });
+  const [note, setNote] = useState<string | null>(null);
 
-  if (done) return <div className="rounded-xl border bg-green-500/10 p-4 text-sm">Onboarding saved. Redirecting to dashboard...</div>;
+  const form = useForm<z.infer<typeof schema>>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      firstName: "",
+      age: 28,
+      sex: "male",
+      heightCm: 178,
+      weightLbs: 180,
+      bodyType: "",
+      activityLevel: "moderate",
+      goalType: "maintain",
+      targetWeightLbs: undefined,
+      timeframeWeeks: 12,
+    },
+  });
+
+  if (done)
+    return (
+      <div className="rounded-xl border bg-green-500/10 p-4 text-sm">
+        Onboarding saved. Redirecting to dashboard...
+      </div>
+    );
+
+  const goalType = form.watch("goalType");
 
   return (
-    <form onSubmit={form.handleSubmit(() => { localStorage.setItem("snapfit_onboarding_complete", "1"); setDone(true); setTimeout(() => (window.location.href = "/app"), 700); })} className="grid gap-4 md:grid-cols-2">
+    <form
+      onSubmit={form.handleSubmit(async (values) => {
+        const res = await saveOnboarding(values);
+        if (res?.message) setNote(res.message);
+        localStorage.setItem("snapfit_onboarding_complete", "1");
+        setDone(true);
+        setTimeout(() => (window.location.href = "/app"), 900);
+      })}
+      className="grid gap-4 md:grid-cols-2"
+    >
       <Input placeholder="First name" {...form.register("firstName")} />
       <Input type="number" placeholder="Age" {...form.register("age")} />
-      <Select {...form.register("sex")}><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></Select>
-      <Select {...form.register("primaryGoal")}><option value="lose_fat">Lose fat</option><option value="build_muscle">Build muscle</option><option value="maintain">Maintain</option><option value="recomposition">Body recomposition</option><option value="athletic_performance">Athletic performance</option></Select>
-      <Input type="number" placeholder="Training days/week" {...form.register("trainingDays")} />
-      <Select {...form.register("dietaryPreference")}><option>Balanced</option><option>High-protein</option><option>Vegetarian</option><option>Vegan</option></Select>
-      <Input className="md:col-span-2" placeholder="Injuries or limitations" {...form.register("injuries")} />
-      <Button className="md:col-span-2" type="submit">Complete onboarding</Button>
+
+      <Select {...form.register("sex")}>
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+        <option value="other">Other</option>
+      </Select>
+
+      <Input type="number" placeholder="Height (cm)" {...form.register("heightCm")} />
+      <Input type="number" placeholder="Weight (lbs)" {...form.register("weightLbs")} />
+
+      <Select {...form.register("bodyType")}>
+        <option value="">Body type (optional)</option>
+        <option value="shredded">Shredded</option>
+        <option value="lean">Lean</option>
+        <option value="overweight">Overweight</option>
+        <option value="obese">Obese</option>
+      </Select>
+
+      <Select {...form.register("activityLevel")}>
+        <option value="sedentary">Sedentary</option>
+        <option value="light">Lightly active</option>
+        <option value="moderate">Moderately active</option>
+        <option value="very">Very active</option>
+      </Select>
+
+      <Select {...form.register("goalType")}>
+        <option value="lose_weight">Lose weight</option>
+        <option value="gain_weight">Gain weight</option>
+        <option value="maintain">Maintain</option>
+      </Select>
+
+      {goalType !== "maintain" ? (
+        <>
+          <Input type="number" placeholder="Target weight (lbs)" {...form.register("targetWeightLbs")} />
+          <Input type="number" placeholder="Timeframe (weeks)" {...form.register("timeframeWeeks")} />
+        </>
+      ) : (
+        <div className="md:col-span-2 text-sm text-muted-foreground">We’ll calculate maintenance calories.</div>
+      )}
+
+      {note ? <div className="md:col-span-2 rounded-lg border bg-muted p-3 text-sm">{note}</div> : null}
+
+      <Button className="md:col-span-2" type="submit">
+        Complete onboarding
+      </Button>
     </form>
   );
 }
