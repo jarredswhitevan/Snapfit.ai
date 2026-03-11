@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { saveOnboarding } from "@/app/actions/onboarding";
 
+const optionalNumber = (schema: z.ZodNumber) =>
+  z.preprocess((v) => (v === "" || v === null || v === undefined ? undefined : Number(v)), schema.optional());
+
 const schema = z.object({
   firstName: z.string().min(2),
   age: z.coerce.number().min(13).max(90),
@@ -16,11 +19,11 @@ const schema = z.object({
   heightFt: z.coerce.number().min(3).max(7),
   heightIn: z.coerce.number().min(0).max(11.9),
   weightLbs: z.coerce.number().min(70).max(600),
-  bodyType: z.string().optional(),
+  bodyType: z.preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
   activityLevel: z.enum(["sedentary", "light", "moderate", "very"]),
   goalType: z.enum(["lose_weight", "gain_weight", "maintain"]),
-  targetWeightLbs: z.coerce.number().min(70).max(600).optional(),
-  timeframeWeeks: z.coerce.number().min(1).max(260).optional(),
+  targetWeightLbs: optionalNumber(z.number().min(70).max(600)),
+  timeframeWeeks: optionalNumber(z.number().min(1).max(260)),
 });
 
 export function OnboardingWizard() {

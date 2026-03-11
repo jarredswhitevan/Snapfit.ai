@@ -4,6 +4,9 @@ import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
+const optionalNumber = (schema: z.ZodNumber) =>
+  z.preprocess((v) => (v === "" || v === null || v === undefined ? undefined : Number(v)), schema.optional());
+
 const onboardingSchema = z.object({
   firstName: z.string().min(2),
   age: z.number().min(13).max(90),
@@ -11,11 +14,11 @@ const onboardingSchema = z.object({
   heightFt: z.number().min(3).max(7),
   heightIn: z.number().min(0).max(11.9),
   weightLbs: z.number().min(70).max(600),
-  bodyType: z.string().optional(),
+  bodyType: z.preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
   activityLevel: z.enum(["sedentary", "light", "moderate", "very"]),
   goalType: z.enum(["lose_weight", "gain_weight", "maintain"]),
-  targetWeightLbs: z.number().min(70).max(600).optional(),
-  timeframeWeeks: z.number().min(1).max(260).optional(),
+  targetWeightLbs: optionalNumber(z.number().min(70).max(600)),
+  timeframeWeeks: optionalNumber(z.number().min(1).max(260)),
 });
 
 export const saveOnboarding = async (values: z.infer<typeof onboardingSchema>) => {
