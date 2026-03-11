@@ -57,21 +57,26 @@ export function OnboardingWizard() {
 
   return (
     <form
-      onSubmit={form.handleSubmit(async (values) => {
-        setSaving(true);
-        setError(null);
-        try {
-          const res = await saveOnboarding(values);
-          if (res?.message) setNote(res.message);
-          localStorage.setItem("snapfit_onboarding_complete", "1");
-          setDone(true);
-          setTimeout(() => (window.location.href = "/app"), 900);
-        } catch (e: any) {
-          setError(e?.message ?? "Unable to save onboarding.");
-        } finally {
-          setSaving(false);
+      onSubmit={form.handleSubmit(
+        async (values) => {
+          setSaving(true);
+          setError(null);
+          try {
+            const res = await saveOnboarding(values);
+            if (res?.message) setNote(res.message);
+            localStorage.setItem("snapfit_onboarding_complete", "1");
+            setDone(true);
+            setTimeout(() => (window.location.href = "/app"), 900);
+          } catch (e: any) {
+            setError(e?.message ?? "Unable to save onboarding.");
+          } finally {
+            setSaving(false);
+          }
+        },
+        () => {
+          setError("Please complete all required fields.");
         }
-      })}
+      )}
       className="grid gap-4 md:grid-cols-2"
     >
       <Input placeholder="First name" {...form.register("firstName")} />
