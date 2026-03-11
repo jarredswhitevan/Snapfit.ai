@@ -2,7 +2,8 @@ import OpenAI from "openai";
 import { mockMealPlan, mockWorkoutPlan } from "@/lib/mock/data";
 import type { MealPlan, WorkoutPlan } from "@/types/domain";
 
-export const isAiConfigured = Boolean(process.env.AI_API_KEY);
+const resolvedApiKey = process.env.AI_API_KEY || process.env.OPENAI_API_KEY;
+export const isAiConfigured = Boolean(resolvedApiKey);
 
 const defaultModel = "gpt-4.1-mini";
 
@@ -25,8 +26,8 @@ export async function generateWorkoutPlan(): Promise<WorkoutPlan> {
   if (!isAiConfigured) return mockWorkoutPlan;
 
   try {
-    const client = new OpenAI({ apiKey: process.env.AI_API_KEY });
-    const model = process.env.AI_MODEL || defaultModel;
+    const client = new OpenAI({ apiKey: resolvedApiKey });
+    const model = process.env.AI_MODEL || process.env.OPENAI_MODEL || defaultModel;
 
     const prompt = `You are SnapFIT, an expert strength & conditioning coach.
 Return ONLY valid JSON for a WorkoutPlan with fields:
@@ -59,8 +60,8 @@ export async function generateMealPlan(): Promise<MealPlan> {
   if (!isAiConfigured) return mockMealPlan;
 
   try {
-    const client = new OpenAI({ apiKey: process.env.AI_API_KEY });
-    const model = process.env.AI_MODEL || defaultModel;
+    const client = new OpenAI({ apiKey: resolvedApiKey });
+    const model = process.env.AI_MODEL || process.env.OPENAI_MODEL || defaultModel;
 
     const prompt = `You are SnapFIT, an expert sports nutrition coach.
 Return ONLY valid JSON for a MealPlan with fields:
