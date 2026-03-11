@@ -130,7 +130,20 @@ export function OnboardingWizard() {
       )}
 
       {note ? <div className="md:col-span-2 rounded-lg border bg-muted p-3 text-sm">{note}</div> : null}
-      {error ? <div className="md:col-span-2 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-700">{error}</div> : null}
+      {error ? (
+        <div className="md:col-span-2 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-700">
+          <p className="font-medium">{error}</p>
+          {Object.keys(form.formState.errors).length ? (
+            <ul className="mt-2 list-inside list-disc">
+              {Object.entries(form.formState.errors).map(([k, v]: any) => (
+                <li key={k}>
+                  {k}: {v?.message ?? "invalid"}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
 
       <Button className="md:col-span-2" type="submit" disabled={saving}>
         {saving ? "Saving..." : "Complete onboarding"}
