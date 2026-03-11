@@ -4,7 +4,12 @@ import { isStripeConfigured } from "@/lib/stripe/config";
 import { getSession } from "@/lib/auth/session";
 
 export async function POST(req: NextRequest) {
-  if (!isStripeConfigured) return NextResponse.json({ url: "/app/billing?portal=mock" });
+  if (!isStripeConfigured) {
+    return NextResponse.json(
+      { error: "Stripe is not configured. Set STRIPE_SECRET_KEY and NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY." },
+      { status: 500 }
+    );
+  }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || `${req.nextUrl.protocol}//${req.nextUrl.host}`;
 
