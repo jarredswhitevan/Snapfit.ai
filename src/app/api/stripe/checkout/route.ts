@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
   // $1 today, then $39.99/mo starting after the 7-day trial
   // Implemented as a one-time invoice item charged at checkout.
-  if (tier === "core" && cycle === "monthly" && stripeEnv.trialSetupFeePriceId) {
+  if (tier === "elite" && cycle === "monthly" && stripeEnv.trialSetupFeePriceId) {
     subscriptionData.add_invoice_items = [{ price: stripeEnv.trialSetupFeePriceId }];
   }
 
