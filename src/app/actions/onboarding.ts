@@ -50,19 +50,22 @@ export const saveOnboarding = async (values: z.infer<typeof onboardingSchema>) =
   // 2) Persist profile + computed calorie target
   const { error: profErr } = await supabase
     .from("profiles")
-    .update({
-      onboarding_complete: true,
-      age: parsed.age,
-      height_cm: Math.round(parsed.heightCm),
-      weight_lbs: Math.round(parsed.weightLbs),
-      body_type: parsed.bodyType ?? null,
-      activity_level: parsed.activityLevel,
-      goal: parsed.goalType,
-      goal_timeframe_weeks: parsed.timeframeWeeks ?? null,
-      target_weight_lbs: parsed.targetWeightLbs ?? null,
-      calorie_target: computed.calorieTarget,
-    })
-    .eq("id", user.id);
+    .upsert(
+      {
+        id: user.id,
+        onboarding_complete: true,
+        age: parsed.age,
+        height_cm: Math.round(parsed.heightCm),
+        weight_lbs: Math.round(parsed.weightLbs),
+        body_type: parsed.bodyType ?? null,
+        activity_level: parsed.activityLevel,
+        goal: parsed.goalType,
+        goal_timeframe_weeks: parsed.timeframeWeeks ?? null,
+        target_weight_lbs: parsed.targetWeightLbs ?? null,
+        calorie_target: computed.calorieTarget,
+      },
+      { onConflict: "id" }
+    );
   if (profErr) throw profErr;
 
   return { success: true, calorieTarget: computed.calorieTarget, message: computed.message };
