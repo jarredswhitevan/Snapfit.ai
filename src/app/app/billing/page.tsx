@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { PricingCard } from "@/components/pricing/pricing-card";
 import { Card } from "@/components/ui/card";
@@ -10,13 +11,34 @@ import { CheckoutButton } from "@/components/CheckoutButton";
 
 export default function BillingPage() {
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
+  const sp = useSearchParams();
+
+  useEffect(() => {
+    const start = sp.get("startCheckout");
+    if (start !== "1") return;
+
+    const tier = (sp.get("tier") as any) ?? "elite";
+    const cycle = (sp.get("cycle") as any) ?? "monthly";
+
+    (async () => {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ tier, cycle }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data?.checkoutUrl) window.location.href = data.checkoutUrl;
+      else if (data?.error) alert(data.error);
+      else alert("Unable to start checkout.");
+    })();
+  }, [sp]);
 
   return (
     <div>
       <PageHeader title="Billing & Subscription" description="Manage your plan, cycle, and renewal settings." />
       <Card>
         <p className="font-medium">Current plan: SnapFIT Core</p>
-        <p className="text-sm text-muted-foreground">Monthly · Trial ends in 5 days · Renews automatically</p>
+        <p className="text-sm text-muted-foreground">Manage your subscription details below.</p>
         <div className="mt-3 flex gap-2">
           <CheckoutButton label="Upgrade" />
           <BillingPortalButton />

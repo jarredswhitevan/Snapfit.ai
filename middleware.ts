@@ -32,8 +32,10 @@ export async function middleware(request: NextRequest) {
   const user = data.user;
   if (!user) return NextResponse.redirect(new URL("/login", request.url));
 
+  const path = request.nextUrl.pathname;
+
   // Onboarding gate: if profile isn't complete, send to /app/onboarding
-  if (!request.nextUrl.pathname.startsWith("/app/onboarding")) {
+  if (!path.startsWith("/app/onboarding")) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("onboarding_complete")
@@ -42,6 +44,22 @@ export async function middleware(request: NextRequest) {
 
     if (!profile?.onboarding_complete) {
       return NextResponse.redirect(new URL("/app/onboarding", request.url));
+    }
+  }
+
+  // Paywall gate: allow only billing + settings until subscription is active/trialing
+  const paywallAllowed = path.startsWith("/app/billing") || path.startsWith("/app/settings") || path.startsWith("/app/onboarding");
+  if (!paywallAllowed) {
+    const { data: sub } = await supabase
+      .from("subscriptions")
+      .select("status")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const status = (sub as any)?.status;
+    const ok = status === "trialing" || status === "active";
+    if (!ok) {
+      return NextResponse.redirect(new URL("/app/billing?startCheckout=1&tier=elite&cycle=monthly", request.url));
     }
   }
 

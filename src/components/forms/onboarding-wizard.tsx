@@ -70,7 +70,7 @@ export function OnboardingWizard() {
             if (res?.message) setNote(res.message);
             localStorage.setItem("snapfit_onboarding_complete", "1");
             setDone(true);
-            setTimeout(() => (window.location.href = "/app"), 900);
+            setTimeout(() => (window.location.href = "/app/billing?startCheckout=1&tier=elite&cycle=monthly"), 900);
           } catch (e: any) {
             setError(e?.message ?? "Unable to save onboarding.");
           } finally {
