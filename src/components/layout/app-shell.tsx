@@ -3,7 +3,7 @@ import { SnapfitLogo } from "@/components/branding/logo";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { SignOutButton } from "@/components/SignOutButton";
 
-const links = ["", "workouts", "meals", "calories", "progress", "history", "billing", "settings"];
+const links = ["", "workouts", "meals", "calories", "progress", "history", "billing", "affiliate", "settings"];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (

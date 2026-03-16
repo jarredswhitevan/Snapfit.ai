@@ -42,24 +42,33 @@ export default function BillingPage() {
 
   return (
     <div>
-      <PageHeader title="Billing & Subscription" description="Manage your plan, cycle, and renewal settings." />
+      <PageHeader title="Billing & Subscription" description="Manage your SnapFIT Elite plan and renewal settings." />
       <Card>
-        <p className="font-medium">Current plan: SnapFIT Core</p>
-        <p className="text-sm text-muted-foreground">Manage your subscription details below.</p>
+        <p className="font-medium">Current plan: SnapFIT Elite</p>
+        <p className="text-sm text-muted-foreground">Need to update or cancel? Manage billing details below.</p>
         <div className="mt-3 flex gap-2">
-          <CheckoutButton label="Upgrade" />
+          <CheckoutButton tier="elite" label="Manage Elite" />
           <BillingPortalButton />
         </div>
       </Card>
 
       <div className="mt-4 inline-flex rounded-lg border p-1 text-sm">
-        <button className={`rounded-md px-3 py-1 ${cycle === "monthly" ? "bg-green-500 text-white" : ""}`} onClick={() => setCycle("monthly")}>Monthly</button>
-        <button className={`rounded-md px-3 py-1 ${cycle === "annual" ? "bg-green-500 text-white" : ""}`} onClick={() => setCycle("annual")}>Annual</button>
+        <button
+          className={`rounded-md px-3 py-1 ${cycle === "monthly" ? "bg-green-500 text-white" : ""}`}
+          onClick={() => setCycle("monthly")}
+        >
+          Monthly
+        </button>
+        <button
+          className={`rounded-md px-3 py-1 ${cycle === "annual" ? "bg-green-500 text-white" : ""}`}
+          onClick={() => setCycle("annual")}
+        >
+          Annual
+        </button>
       </div>
 
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <PricingCard tier="core" cycle={cycle} cta="Switch plan" />
-        <PricingCard tier="elite" cycle={cycle} cta="Upgrade to Elite" />
+      <div className="mt-4 grid gap-4 md:grid-cols-1">
+        <PricingCard tier="elite" cycle={cycle} cta="Choose Elite" />
       </div>
     </div>
   );
